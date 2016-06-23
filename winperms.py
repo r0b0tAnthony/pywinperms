@@ -1,4 +1,6 @@
 import os, sys
+import optparse
+'''
 import win32api
 import win32security
 import ntsecuritycon as con
@@ -17,3 +19,22 @@ if dacl.IsValid():
     win32security.SetFileSecurity(filename, win32security.DACL_SECURITY_INFORMATION, sd)
 else:
     print "Invalid ACL"
+'''
+if __name__ == '__main__':
+    parser_usage = "winperms.py -h root_dir perms_file"
+    parser = optparse.OptionParser(usage=parser_usage)
+
+    parser.add_option('-l', '--log', type='choice', choices=[1,2,3,4,5], default=1,
+                      help='level of log verbosity "%default"')
+    options, args = parser.parse_args()
+
+    if len(args) < 2:
+        raise Exception('Please provide a root path,root_dir, and json permissions file, perms_file. winperms.py /path/to/root /path/to/perms.json')
+    else:
+        root_dir = os.path.abspath(args[0])
+        if not os.path.isdir(root_dir):
+            raise Exception("root_dir, %s, arg is not a directory" % root_dir)
+
+        perms_file = os.path.abspath(args[1])
+        if not os.path.isfile(perms_file) or os.path.splitext(perms_file)[1] != '.json':
+            raise Exception("perms_file, %s, is either not a file or does not end with json ext." % perms_file)
