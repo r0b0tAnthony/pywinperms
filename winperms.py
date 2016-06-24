@@ -1,5 +1,9 @@
-import os, sys
+import os, sys, inspect
 import optparse
+import pprint
+import json
+
+pp = pprint.PrettyPrinter(indent=4)
 '''
 import win32api
 import win32security
@@ -20,6 +24,12 @@ if dacl.IsValid():
 else:
     print "Invalid ACL"
 '''
+
+def winperm(root_dir, perm_path):
+    perm_fo = open(perm_path, 'r')
+    perm_obj = json.load(perm_fo)
+    pp.pprint(perm_obj)
+
 if __name__ == '__main__':
     parser_usage = "winperms.py -h root_dir perms_file"
     parser = optparse.OptionParser(usage=parser_usage)
@@ -38,3 +48,5 @@ if __name__ == '__main__':
         perms_file = os.path.abspath(args[1])
         if not os.path.isfile(perms_file) or os.path.splitext(perms_file)[1] != '.json':
             raise Exception("perms_file, %s, is either not a file or does not end with json ext." % perms_file)
+
+        winperm(root_dir,perms_file)
