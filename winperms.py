@@ -50,6 +50,8 @@ def get_cache(sec_obj, users = {}, acls = {}):
                         if not users.has_key(user_key):
                             sid, domain, account_type = win32security.LookupAccountName(ace['account']['domain'], ace['account']['name'])
                             users[user_key] = sid
+                    except KeyError:
+                        raise KeyError('Invalid acl object!')
 
             else:
                 raise Exception('acl paramter list is empty')
