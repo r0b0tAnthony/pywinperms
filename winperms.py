@@ -25,10 +25,49 @@ else:
     print "Invalid ACL"
 '''
 
+def get_cache(sec_obj):
+    print "Running process_security"
+    #pp.pprint(sec_obj)
+    for key in sec_obj:
+        print key
+        current_obj = sec_obj[key]
+
+        if not current_obj.has_key('owner'):
+            raise Exception("'%s' is not a valid security object! Missing owner parameter." % key)
+        try:
+            if current_obj['type'] not in ['file', 'folder', 'all']:
+                raise Exception("Valid type values are file, folder, all. On '%s' security obj" % key)
+        except KeyError:
+                raise KeyError("'%s' is not a valid security object! Missing type parameter." % key)
+
+        try:
+            if len(current_obj['acl']) > 0:
+                for acl_index  in range(len(current_obj['acl'])):
+                    print "ACLs for %s" % key
+                    pp.pprint(current_obj['acl'][acl_index])
+            else:
+                raise Exception('acl paramter list is empty')
+        except KeyError:
+            raise KeyError("'%s' is not a valid security object! Missing acl parameter." % key)
+
+
+        if current_obj.has_key('children'):
+            print "Has Children"
+            pp.pprint(current_obj['children'])
+            get_cache(current_obj['children'])
+    return ('meow', 'woof')
 def winperm(root_dir, perm_path):
     perm_fo = open(perm_path, 'r')
     perm_obj = json.load(perm_fo)
-    pp.pprint(perm_obj)
+    #pp.pprint(perm_obj)
+
+    users = {}
+    explicit_perms = {}
+    print "Looping"
+    (sec_users, sec_exp_perms) = get_cache(perm_obj)
+    print "End Loop"
+
+
 
 if __name__ == '__main__':
     parser_usage = "winperms.py -h root_dir perms_file"
