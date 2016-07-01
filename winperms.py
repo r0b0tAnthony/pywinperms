@@ -25,7 +25,7 @@ else:
     print "Invalid ACL"
 '''
 
-def get_cache(sec_obj):
+def get_cache(sec_obj, users = {}, acls = {}):
     print "Running process_security"
     #pp.pprint(sec_obj)
     for key in sec_obj:
@@ -44,7 +44,13 @@ def get_cache(sec_obj):
             if len(current_obj['acl']) > 0:
                 for acl_index  in range(len(current_obj['acl'])):
                     print "ACLs for %s" % key
-                    pp.pprint(current_obj['acl'][acl_index])
+                    ace = current_obj['acl'][acl_index]
+                    try:
+                        user_key = str(ace['account']['domain'] + '\\' + ace['account']['name']).lower
+                        if not users.has_key(user_key):
+                            sid, domain, account_type = win32security.LookupAccountName(ace['account']['domain'], ace['account']['name'])
+                            users[user_key] = sid
+
             else:
                 raise Exception('acl paramter list is empty')
         except KeyError:
