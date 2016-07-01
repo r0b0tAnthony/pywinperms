@@ -1,0 +1,49 @@
+{"\\d{5}_\\w+":
+    {
+      "type": "folder",
+      "acl": [
+        {"obj": "NYC\\User", "mask": ["READ_ACCESS"], "type": "allow"}
+      ],
+      "owner": "NYC\\Administrator",
+      "audit": [
+        {"obj": "NYC\\User", "mask": ["READ_ACCESS"], "type": "allow"}
+      ],
+      "children":
+        {"Im an invalid child":
+          {
+            "type": "folder",
+            "acl": [
+              {"obj": "NYC\\User", "mask": ["READ_ACCESS"], "type": "allow"}
+            ],
+            "owner": "NYC\\Administrator",
+            "audit": [
+              {"obj": "NYC\\User", "mask": ["READ_ACCESS"], "type": "allow"}
+            ]
+          }
+        }
+    },
+"meow":
+  {
+    "type": "folder",
+    "acl": [
+      {"obj": "NYC\\User", "mask": ["READ_ACCESS"], "type": "allow"}
+    ],
+    "owner": "NYC\\Administrator",
+    "audit": [
+      {"obj": "NYC\\User", "mask": ["READ_ACCESS"], "type": "allow"}
+    ],
+    "children":
+      {"\\d{5}_\\w+":
+        {
+          "type": "folder",
+          "acl": [
+            {"obj": "NYC\\User", "mask": ["READ_ACCESS"], "type": "allow"}
+          ],
+          "owner": "NYC\\Administrator",
+          "audit": [
+            {"obj": "NYC\\User", "mask": ["READ_ACCESS"], "type": "allow"}
+          ]
+        }
+    }
+  }
+}
