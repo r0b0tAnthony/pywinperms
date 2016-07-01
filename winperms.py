@@ -2,6 +2,10 @@ import os, sys, inspect
 import optparse
 import pprint
 import json
+import timeit
+import win32api
+import win32security
+import ntsecuritycon as con
 
 pp = pprint.PrettyPrinter(indent=4)
 '''
@@ -46,10 +50,10 @@ def get_cache(sec_obj, users = {}, acls = {}):
                     print "ACLs for %s" % key
                     ace = current_obj['acl'][acl_index]
                     try:
-                        user_key = str(ace['account']['domain'] + '\\' + ace['account']['name']).lower
-                        if not users.has_key(user_key):
+                        user_key = ace['account']['domain'] + '/' + ace['account']['name']
+                        if not users.has_key(user_key.lower()):
                             sid, domain, account_type = win32security.LookupAccountName(ace['account']['domain'], ace['account']['name'])
-                            users[user_key] = sid
+                            users[user_key.lower()] = sid
                     except KeyError:
                         raise KeyError('Invalid acl object!')
 
@@ -62,8 +66,8 @@ def get_cache(sec_obj, users = {}, acls = {}):
         if current_obj.has_key('children'):
             print "Has Children"
             pp.pprint(current_obj['children'])
-            get_cache(current_obj['children'])
-    return ('meow', 'woof')
+            get_cache(current_obj['children'], users, acls)
+    return (users, acls)
 def winperm(root_dir, perm_path):
     perm_fo = open(perm_path, 'r')
     perm_obj = json.load(perm_fo)
@@ -73,6 +77,7 @@ def winperm(root_dir, perm_path):
     explicit_perms = {}
     print "Looping"
     (sec_users, sec_exp_perms) = get_cache(perm_obj)
+    pp.pprint(sec_users)
     print "End Loop"
 
 
