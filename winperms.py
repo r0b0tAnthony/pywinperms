@@ -28,6 +28,20 @@ if dacl.IsValid():
 else:
     print "Invalid ACL"
 '''
+def get_account_sids(accounts, users = {}):
+    for x in range(len(accounts)):
+        
+        account = accounts[x]['account']
+        try:
+            user_key = account['domain'] + '/' + account['name']
+            if not users.has_key(user_key.lower()):
+                sid = get_account(account['name'], account['domain'])[0]
+                users[user_key.lower()] = sid
+        except KeyError:
+            raise KeyError('Invalid account object!')
+    return users
+def get_account(name, domain = ''):
+    return win32security.LookupAccountName(domain, name)
 
 def get_cache(sec_obj, users = {}, acls = {}):
     print "Running process_security"
@@ -35,34 +49,37 @@ def get_cache(sec_obj, users = {}, acls = {}):
     for key in sec_obj:
         print key
         current_obj = sec_obj[key]
-
-        if not current_obj.has_key('owner'):
-            raise Exception("'%s' is not a valid security object! Missing owner parameter." % key)
+        effective_acl = {}
+        accounts = []
+        try:
+            accounts += [ {"account": current_obj['owner']} ]
+            users.update(get_account_sids(accounts, users))
+            
+        except KeyError:
+            pp.pprint(current_obj['owner'])
+            raise KeyError("'%s' is not a valid security object! Missing owner parameter." % key)
         try:
             if current_obj['type'] not in ['file', 'folder', 'all']:
                 raise Exception("Valid type values are file, folder, all. On '%s' security obj" % key)
         except KeyError:
-                raise KeyError("'%s' is not a valid security object! Missing type parameter." % key)
+            raise KeyError("'%s' is not a valid security object! Missing type parameter." % key)
 
         try:
             if len(current_obj['acl']) > 0:
-                for acl_index  in range(len(current_obj['acl'])):
-                    print "ACLs for %s" % key
-                    ace = current_obj['acl'][acl_index]
-                    try:
-                        user_key = ace['account']['domain'] + '/' + ace['account']['name']
-                        if not users.has_key(user_key.lower()):
-                            sid = win32security.LookupAccountName(ace['account']['domain'], ace['account']['name'])[0]
-                            users[user_key.lower()] = sid
-                    except KeyError:
-                        raise KeyError('Invalid acl object!')
-
+                accounts += current_obj['acl']
+                users.update(get_account_sids(accounts, users))
+                
             else:
                 raise Exception('acl paramter list is empty')
         except KeyError:
             raise KeyError("'%s' is not a valid security object! Missing acl parameter." % key)
-
-
+        try:
+            accounts += current_obj['audit']
+        except KeyError:
+            pass
+        
+        users.update(get_account_sids(accounts, users))
+        
         if current_obj.has_key('children'):
             print "Has Children"
             pp.pprint(current_obj['children'])
