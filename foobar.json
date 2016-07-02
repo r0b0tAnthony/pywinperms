@@ -4,7 +4,7 @@
       "acl": [
         {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
       ],
-      "owner": {"name": "Administrator", "domain": "NYC"},
+      "owner": {"name": "sftpusers", "domain": "NYC"},
       "audit": [
         {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
       ],
@@ -30,14 +30,14 @@
     ],
     "owner": {"name": "Administrator", "domain": "NYC"},
     "audit": [
-      {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+      {"account": {"name": "Domain Admins", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
     ],
     "children":
       {"\\d{5}_\\w+":
         {
           "type": "folder",
           "acl": [
-            {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+            {"account": {"name": "Administration", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
           ],
           "owner": {"name": "Administrator", "domain": "NYC"},
           "audit": [
