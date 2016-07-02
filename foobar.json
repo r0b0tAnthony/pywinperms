@@ -1,49 +1,166 @@
-{"\\d{5}_\\w+":
-    {
-      "type": "folder",
-      "acl": [
-        {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
-      ],
-      "owner": {"name": "sftpusers", "domain": "NYC"},
-      "audit": [
-        {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
-      ],
-      "children":
-        {"Im an invalid child":
-          {
-            "type": "folder",
-            "acl": [
-              {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
-            ],
-            "owner": {"name": "Administrator", "domain": "NYC"},
-            "audit": [
-              {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
-            ]
-          }
-        }
-    },
-"meow":
-  {
-    "type": "folder",
-    "acl": [
-      {"account": {"name": "JOBS", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
-    ],
-    "owner": {"name": "Administrator", "domain": "NYC"},
-    "audit": [
-      {"account": {"name": "Domain Admins", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
-    ],
-    "children":
-      {"\\d{5}_\\w+":
-        {
+{
+    "\\d{5}_\\w+":{
           "type": "folder",
           "acl": [
-            {"account": {"name": "Administration", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+            {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow", "inherit": "true"}
           ],
-          "owner": {"name": "Administrator", "domain": "NYC"},
+          "owner": {"name": "sftpusers", "domain": "NYC"},
           "audit": [
-            {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
-          ]
+            {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow", "inherit": "true"}
+          ],
+          "children": {
+            "child1": {
+                "type": "folder",
+                "acl": [
+                  {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                ],
+                "owner": {"name": "Administrator", "domain": "NYC"},
+                "audit": [
+                  {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                ]
+            },
+            "child2": {
+                "type": "folder",
+                "acl": [
+                  {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow", "inherit": "true"}
+                ],
+                "owner": {"name": "Administrator", "domain": "NYC"},
+                "audit": [
+                  {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                ],
+               "children": {
+                    "child2a": {
+                       "type": "folder",
+                        "acl": [
+                            {"account": {"name": "Administration", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                        ],
+                        "owner": {"name": "Administrator", "domain": "NYC"},
+                        "audit": [
+                            {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                        ]
+                    },
+                    "child2b": {
+                        "type": "folder",
+                        "acl": [
+                            {"account": {"name": "phosphene32-pc", "domain": "NYC"}, "mask": ["MODIFY"], "type": "allow", "inherit": "true"}
+                        ],
+                        "owner": {"name": "Administrator", "domain": "NYC"},
+                        "audit": [
+                            {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                        ],
+                        "children": {
+                            "child2b1": {
+                               "type": "folder",
+                                "acl": [
+                                    {"account": {"name": "Administration", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                                ],
+                                "owner": {"name": "Administrator", "domain": "NYC"},
+                                "audit": [
+                                    {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                                ]
+                            },
+                            "child2b2": {
+                                "type": "folder",
+                                "acl": [
+                                    {"account": {"name": "JOBS", "domain": "NYC"}, "mask": ["MODIFY"], "type": "allow"}
+                                ],
+                                "owner": {"name": "Administrator", "domain": "NYC"},
+                                "audit": [
+                                    {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "meow": {
+        "type": "folder",
+        "acl": [
+            {"account": {"name": "JOBS", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+        ],
+        "owner": {"name": "Administrator", "domain": "NYC"},
+        "audit": [
+            {"account": {"name": "Domain Admins", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+        ],
+        "children": {
+            "\\d{5}_\\w+": {
+                "type": "folder",
+                "acl": [
+                    {"account": {"name": "Administration", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                ],
+                "owner": {"name": "Administrator", "domain": "NYC"},
+                "audit": [
+                    {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                ],
+                "children": {
+                    "child2a": {
+                       "type": "folder",
+                        "acl": [
+                            {"account": {"name": "Administration", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow", "inherit": "true"}
+                        ],
+                        "owner": {"name": "Administrator", "domain": "NYC"},
+                        "audit": [
+                            {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                        ],
+                        "children": {
+                            "child2a1": {
+                               "type": "folder",
+                                "acl": [
+                                    {"account": {"name": "Administration", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                                ],
+                                "owner": {"name": "Administrator", "domain": "NYC"},
+                                "audit": [
+                                    {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                                ]
+                            },
+                            "child2a2": {
+                                "type": "folder",
+                                "acl": [
+                                    {"account": {"name": "JOBS", "domain": "NYC"}, "mask": ["MODIFY"], "type": "allow"}
+                                ],
+                                "owner": {"name": "Administrator", "domain": "NYC"},
+                                "audit": [
+                                    {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                                ]
+                            }
+                        }
+                    },
+                    "child2b": {
+                        "type": "folder",
+                        "acl": [
+                            {"account": {"name": "JOBS", "domain": "NYC"}, "mask": ["MODIFY"], "type": "allow"}
+                        ],
+                        "owner": {"name": "Administrator", "domain": "NYC"},
+                        "audit": [
+                            {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                        ],
+                        "children": {
+                            "child2b1": {
+                               "type": "folder",
+                                "acl": [
+                                    {"account": {"name": "Administration", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                                ],
+                                "owner": {"name": "Administrator", "domain": "NYC"},
+                                "audit": [
+                                    {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                                ]
+                            },
+                            "child2b2": {
+                                "type": "folder",
+                                "acl": [
+                                    {"account": {"name": "JOBS", "domain": "NYC"}, "mask": ["MODIFY"], "type": "allow"}
+                                ],
+                                "owner": {"name": "Administrator", "domain": "NYC"},
+                                "audit": [
+                                    {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
-  }
 }
