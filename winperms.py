@@ -8,6 +8,34 @@ import win32security
 import ntsecuritycon as con
 from functools import partial
 import copy
+#translation to ntsecuritycon constants
+access_bits = {
+    'READ_DATA': con.FILE_READ_DATA,
+    'LIST_DIRECTORY': con.FILE_LIST_DIRECTORY,
+    'WRITE_DATA': con.FILE_WRITE_DATA,
+    'ADD_FILE': con.FILE_ADD_FILE,
+    'APPEND_DATA': con.FILE_APPEND_DATA,
+    'ADD_SUBDIRECTORY': con.FILE_ADD_SUBDIRECTORY,
+    'CREATE_PIPE_INSTANCE': con.FILE_CREATE_PIPE_INSTANCE
+    'READ_EA': con.FILE_READ_EA,
+    'WRITE_EA': con.FILE_WRITE_EA,
+    'EXECUTE': con.FILE_EXECUTE,
+    'TRAVERSE': con.FILE_TRAVERSE,
+    'DELETE_CHILD': con.FILE_DELETE_CHILD,
+    'READ_ATTRIBUTES': con.FILE_READ_ATTRIBUTES,
+    'WRITE_ATTRIBUTES': con.FILE_WRITE_ATTRIBUTE,
+    'ALL_ACCESS': con.FILE_ALL_ACCESS,
+    'GENERIC_READ': con.FILE_GENERIC_READ,
+    'GENERIC_WRITE': con.FILE_GENERIC_WRITE,
+    'GENERIC_EXECUTE': con.FILE_GENERIC_EXECUTE,
+    'WRITE_DAC': con.WRITE_DAC,
+    'WRITE_OWNER': con.WRITE_OWNER,
+    'SYNCHRONIZE': con.SYNCHRONIZE,
+    'OBJECT_INHERIT': con.OBJECT_INHERIT_ACE,
+    'CONTAINER_INHERIT': con.CONTAINER_INHERIT_ACE
+    'NO_PROPOGATE_INHERIT': con.NO_PROPAGATE_INHERIT_ACE,
+    'INHERIT_ONLY': con.INHERIT_ONLY_ACE
+}
 
 pp = pprint.PrettyPrinter(indent=4)
 '''
@@ -15,13 +43,13 @@ import win32api
 import win32security
 import ntsecuritycon as con
 
-filename = os.path.join(os.path.dirname(__file__), 'benchtree')
+filename = os.path.join(os.path.dirname(__con.FILE__), 'benchtree')
 jobs, domain, type = win32security.LookupAccountName ("", "JOBS")
 admins, domain, type = win32security.LookupAccountName ("", "Administrators")
 sd = win32security.GetFileSecurity (filename, win32security.DACL_SECURITY_INFORMATION)
 dacl = win32security.ACL ()
-dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_GENERIC_READ, admins)
-dacl.AddAccessAllowedAceEx(win32security.ACL_REVISION, con.OBJECT_INHERIT_ACE, con.FILE_ALL_ACCESS, jobs)
+dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.con.FILE_GENERIC_READ, admins)
+dacl.AddAccessAllowedAceEx(win32security.ACL_REVISION, con.OBJECT_INHERIT_ACE, con.con.FILE_ALL_ACCESS, jobs)
 
 if dacl.IsValid():
     print "Valid ACL"
@@ -94,6 +122,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}, inherit = {}):
             #pp.pprint(current_obj['acl'])
             for x in range(len(current_obj['acl'])):
                 ace = current_obj['acl'][x]
+                
                 try:
                     if ace['inherit'] == 'true':
                         if not current_inherit.has_key('acl'):
