@@ -23,7 +23,7 @@ access_bits = {
     'TRAVERSE': con.FILE_TRAVERSE,
     'DELETE_CHILD': con.FILE_DELETE_CHILD,
     'READ_ATTRIBUTES': con.FILE_READ_ATTRIBUTES,
-    'WRITE_ATTRIBUTES': con.FILE_WRITE_ATTRIBUTE,
+    'WRITE_ATTRIBUTES': con.FILE_WRITE_ATTRIBUTES,
     'ALL_ACCESS': con.FILE_ALL_ACCESS,
     'GENERIC_READ': con.FILE_GENERIC_READ,
     'GENERIC_WRITE': con.FILE_GENERIC_WRITE,
@@ -32,7 +32,7 @@ access_bits = {
     'WRITE_OWNER': con.WRITE_OWNER,
     'SYNCHRONIZE': con.SYNCHRONIZE,
     'OBJECT_INHERIT': con.OBJECT_INHERIT_ACE,
-    'CONTAINER_INHERIT': con.CONTAINER_INHERIT_ACE
+    'CONTAINER_INHERIT': con.CONTAINER_INHERIT_ACE,
     'NO_PROPOGATE_INHERIT': con.NO_PROPAGATE_INHERIT_ACE,
     'INHERIT_ONLY': con.INHERIT_ONLY_ACE,
     'VALID_INHERIT_FLAGS': con.VALID_INHERIT_FLAGS,
@@ -118,22 +118,21 @@ def get_user_cache(sec_obj, users = {}, acls = {}):
             #pp.pprint(current_obj['children'])
             get_user_cache(current_obj['children'], users, acls)
     return (users, acls)
- def get_ace(ace, pyacl_obj):
-     access_mask = get_mask(ace['mask'])
-     sid = users[ace['account']['domain'] + '/' + ace['account']['name']]
-     inherit_mask = 0
-     try:
-         inherit_mask = get_mask(ace['inherit'])
-     except KeyError:
-         pass
-     else:
-         if ace['type'] == 'allow':
-             dacl.AddAccessAllowedAceEx(win32security.ACL_REVISION, inherit_mask, access_mask, sid)
-         else if ace['type'] == 'deny':
-             dacl.AddAccessDeniedAceEx(win32security.ACL_REVISION, inherit_mask, access_mask, sid)
-         else:
-             raise ValueError('ACE access type must be allow or deny!')
-        return pyacl_obj
+def get_ace(ace, users, pyacl_obj):
+    access_mask = get_mask(ace['mask'])
+    sid = users[str(ace['account']['domain'] + '/' + ace['account']['name']).lower()]
+    inherit_mask = 0
+    try:
+        inherit_mask = get_mask(ace['inherit'])
+    except KeyError:
+        pass
+    if ace['type'] == 'allow':
+        pyacl_obj.AddAccessAllowedAceEx(win32security.ACL_REVISION, inherit_mask, access_mask, sid)
+    elif ace['type'] == 'deny':
+        pyacl_obj.AddAccessDeniedAceEx(win32security.ACL_REVISION, inherit_mask, access_mask, sid)
+    else:
+        raise ValueError('ACE access type must be allow or deny!')
+    return pyacl_obj
 def get_acl_cache(sec_obj, users = {}, acls = {}):
     for key in sec_obj:
         current_obj = sec_obj[key]
@@ -146,19 +145,19 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
         try:
             for x in range(len(current_obj['acl'])):
                 ace = current_obj['acl'][x]
-                dacl = get_ace(ace, dacl)
-        except KeyError:
+                dacl = get_ace(ace, users, dacl)
+        except KeyError as e:
             raise KeyError("'%s' is not a valid security object! Missing acl parameter." % key)
         else:
-
-        current_obj['dacl'] = dacl
+            current_obj['dacl'] = dacl
         sacl =  win32security.ACL();
         try:
             for x in range(len(current_obj['audit'])):
                 ace = current_obj['audit'][x]
-                sacl = get_ace(ace, sacl)
+                sacl = get_ace(ace, users, sacl)
         except KeyError:
             pass
+        current_obj['sacl'] = sacl
 
         if current_obj.has_key('children'):
             #pp.pprint(current_obj['children'])
