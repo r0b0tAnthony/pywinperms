@@ -119,17 +119,14 @@ def get_user_cache(sec_obj, users = {}, acls = {}):
             get_user_cache(current_obj['children'], users, acls)
     return (users, acls)
 
-def get_acl_cache(sec_obj, users = {}, acls = {}, inherit = {}):
+def get_acl_cache(sec_obj, users = {}, acls = {}):
     for key in sec_obj:
-        current_inherit = copy.deepcopy(inherit)
         current_obj = sec_obj[key]
         try:
             if current_obj['type'] not in ['file', 'folder', 'all']:
                 raise Exception("Valid type values are file, folder, all. On '%s' security obj" % key)
         except KeyError:
             raise KeyError("'%s' is not a valid security object! Missing type parameter." % key)
-        print "Inherited: %s" % key
-        pp.pprint(current_inherit)
         dacl = win32security.ACL()
         try:
             #pp.pprint(current_obj['acl'])
@@ -141,14 +138,18 @@ def get_acl_cache(sec_obj, users = {}, acls = {}, inherit = {}):
                 ace = current_obj['acl'][x]
                 access_mask = get_mask(ace['mask'])
                 sid = users[ace['account']['domain'] + '/' + ace['account']['name']]
+                inherit_mask = 0
                 try:
                     inherit_mask = get_mask(ace['inherit'])
-                    if inherit_mask & access_bits['VALID_INHERIT_FLAGS']:
-                        if not current_inherit.has_key('acl'):
-                            current_inherit['acl'] = []
-                        current_inherit['acl'] += [ace]
                 except KeyError:
                     pass
+                else:
+                    if ace['type'] == 'allow':
+                        dacl.AddAccessAllowedAceEx(win32security.ACL_REVISION, inherit_mask, access_mask, sid)
+                    else if ace['type'] == 'deny':
+                        dacl.AddAccessDeniedAceEx(win32security.ACL_REVISION, inherit_mask, access_mask, sid)
+                    else:
+                        raise ValueError('ACE access type must be allow or deny!')
 
         '''try:
 
@@ -157,7 +158,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}, inherit = {}):
 
         if current_obj.has_key('children'):
             #pp.pprint(current_obj['children'])
-            get_acl_cache(current_obj['children'], users, acls, current_inherit)
+            get_acl_cache(current_obj['children'], users, acls)
     return (users, acls)
 def winperm(root_dir, perm_path):
     perm_fo = open(perm_path, 'r')
