@@ -35,6 +35,7 @@ access_bits = {
     'CONTAINER_INHERIT': con.CONTAINER_INHERIT_ACE
     'NO_PROPOGATE_INHERIT': con.NO_PROPAGATE_INHERIT_ACE,
     'INHERIT_ONLY': con.INHERIT_ONLY_ACE,
+    'VALID_INHERIT_FLAGS': con.VALID_INHERIT_FLAGS,
     'INHERITED_ACE': win32security.INHERITED_ACE
 }
 
@@ -59,9 +60,19 @@ if dacl.IsValid():
 else:
     print "Invalid ACL"
 '''
+
+def get_mask(keys):
+    mask = 0
+    for key in keys:
+        try:
+            mask = mask | access_bits[key]
+        except:
+            pass
+
+    return mask
+
 def get_account_sids(accounts, users = {}):
     for x in range(len(accounts)):
-        
         account = accounts[x]['account']
         try:
             user_key = account['domain'] + '/' + account['name']
@@ -82,7 +93,7 @@ def get_user_cache(sec_obj, users = {}, acls = {}):
         try:
             accounts += [ {"account": current_obj['owner']} ]
             users.update(get_account_sids(accounts, users))
-            
+
         except KeyError:
             pp.pprint(current_obj['owner'])
             raise KeyError("'%s' is not a valid security object! Missing owner parameter." % key)
@@ -91,7 +102,7 @@ def get_user_cache(sec_obj, users = {}, acls = {}):
             if len(current_obj['acl']) > 0:
                 accounts += current_obj['acl']
                 users.update(get_account_sids(accounts, users))
-                
+
             else:
                 raise Exception('acl paramter list is empty')
         except KeyError:
@@ -100,14 +111,14 @@ def get_user_cache(sec_obj, users = {}, acls = {}):
             accounts += current_obj['audit']
         except KeyError:
             pass
-        
+
         users.update(get_account_sids(accounts, users))
-        
+
         if current_obj.has_key('children'):
             #pp.pprint(current_obj['children'])
             get_user_cache(current_obj['children'], users, acls)
     return (users, acls)
-    
+
 def get_acl_cache(sec_obj, users = {}, acls = {}, inherit = {}):
     for key in sec_obj:
         current_inherit = copy.deepcopy(inherit)
@@ -119,25 +130,31 @@ def get_acl_cache(sec_obj, users = {}, acls = {}, inherit = {}):
             raise KeyError("'%s' is not a valid security object! Missing type parameter." % key)
         print "Inherited: %s" % key
         pp.pprint(current_inherit)
+        dacl = win32security.ACL()
         try:
             #pp.pprint(current_obj['acl'])
-            for x in range(len(current_obj['acl'])):
+            acl_length = len(current_obj['acl'])
+        except KeyError:
+            raise KeyError("'%s' is not a valid security object! Missing acl parameter." % key)
+        else:
+            for x in range(acl_length):
                 ace = current_obj['acl'][x]
-                
+                access_mask = get_mask(ace['mask'])
+                sid = users[ace['account']['domain'] + '/' + ace['account']['name']]
                 try:
-                    if ace['inherit'] == 'true':
+                    inherit_mask = get_mask(ace['inherit'])
+                    if inherit_mask & access_bits['VALID_INHERIT_FLAGS']:
                         if not current_inherit.has_key('acl'):
                             current_inherit['acl'] = []
                         current_inherit['acl'] += [ace]
                 except KeyError:
                     pass
-        except KeyError:
-            raise KeyError("'%s' is not a valid security object! Missing acl parameter." % key)
+
         '''try:
-            
+
         except KeyError:
             pass'''
-        
+
         if current_obj.has_key('children'):
             #pp.pprint(current_obj['children'])
             get_acl_cache(current_obj['children'], users, acls, current_inherit)
