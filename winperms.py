@@ -16,7 +16,7 @@ access_bits = {
     'ADD_FILE': con.FILE_ADD_FILE,
     'APPEND_DATA': con.FILE_APPEND_DATA,
     'ADD_SUBDIRECTORY': con.FILE_ADD_SUBDIRECTORY,
-    'CREATE_PIPE_INSTANCE': con.FILE_CREATE_PIPE_INSTANCE
+    'CREATE_PIPE_INSTANCE': con.FILE_CREATE_PIPE_INSTANCE,
     'READ_EA': con.FILE_READ_EA,
     'WRITE_EA': con.FILE_WRITE_EA,
     'EXECUTE': con.FILE_EXECUTE,
@@ -167,7 +167,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
 def winperm(root_dir, perm_path):
     perm_fo = open(perm_path, 'r')
     perm_obj = json.load(perm_fo)
-    #pp.pprint(perm_obj)
+    pp.pprint(perm_obj)
 
     users = {}
     explicit_perms = {}
@@ -175,7 +175,9 @@ def winperm(root_dir, perm_path):
     user_cache_times = timeit.Timer(partial(get_user_cache, perm_obj)).repeat(3, 1000)
     user_cache_time = min(user_cache_times) / 1000
     print "User Cache Time: %s" % user_cache_time
-    get_acl_cache(perm_obj)
+    user_cache = get_user_cache(perm_obj)[0]
+    get_acl_cache(perm_obj, user_cache)
+    pp.pprint(perm_obj)
     #pp.pprint(sec_users)
     print "End Loop"
 
