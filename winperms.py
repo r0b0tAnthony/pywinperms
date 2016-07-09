@@ -97,7 +97,7 @@ def get_user_cache(sec_obj, users = {}, acls = {}):
         except KeyError:
             pp.pprint(current_obj['owner'])
             raise KeyError("'%s' is not a valid security object! Missing owner parameter." % key)
-
+            
         try:
             if len(current_obj['acl']) > 0:
                 accounts += current_obj['acl']
@@ -121,6 +121,21 @@ def get_user_cache(sec_obj, users = {}, acls = {}):
 def get_ace(ace, users, pyacl_obj):
     access_mask = get_mask(ace['mask'])
     sid = users[str(ace['account']['domain'] + '/' + ace['account']['name']).lower()]
+    inherit_mask = 0
+    try:
+        inherit_mask = get_mask(ace['inherit'])
+    except KeyError:
+        pass
+    if ace['type'] == 'allow':
+        pyacl_obj.AddAccessAllowedAceEx(win32security.ACL_REVISION, inherit_mask, access_mask, sid)
+    elif ace['type'] == 'deny':
+        pyacl_obj.AddAccessDeniedAceEx(win32security.ACL_REVISION, inherit_mask, access_mask, sid)
+    else:
+        raise ValueError('ACE access type must be allow or deny!')
+    return pyacl_obj
+def get_ace2(ace, pyacl_obj):
+    access_mask = get_mask(ace['mask'])
+    sid = get_account(ace['account']['name'], ace['account']['domain'])[0]
     inherit_mask = 0
     try:
         inherit_mask = get_mask(ace['inherit'])
@@ -163,6 +178,48 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             #pp.pprint(current_obj['children'])
             get_acl_cache(current_obj['children'], users, acls)
     return (users, acls)
+def get_acl2_cache(sec_obj, users = {}, acls = {}):
+    for key in sec_obj:
+        current_obj = sec_obj[key]
+        accounts = []
+        try:
+            accounts += [ {"account": current_obj['owner']} ]
+            users.update(get_account_sids(accounts, users))
+
+        except KeyError:
+            pp.pprint(current_obj['owner'])
+            raise KeyError("'%s' is not a valid security object! Missing owner parameter." % key)
+        try:
+            if current_obj['type'] not in ['file', 'folder', 'all']:
+                raise Exception("Valid type values are file, folder, all. On '%s' security obj" % key)
+        except KeyError:
+            raise KeyError("'%s' is not a valid security object! Missing type parameter." % key)
+        dacl = win32security.ACL()
+        try:
+            accounts += current_obj['acl']
+            users.update(get_account_sids(accounts, users))
+            for x in range(len(current_obj['acl'])):
+                ace = current_obj['acl'][x]
+                dacl = get_ace(ace, users, dacl)
+        except KeyError as e:
+            raise KeyError("'%s' is not a valid security object! Missing acl parameter." % key)
+        else:
+            current_obj['dacl'] = dacl
+        sacl =  win32security.ACL();
+        try:
+            accounts += current_obj['acl']
+            users.update(get_account_sids(accounts, users))
+            for x in range(len(current_obj['audit'])):
+                ace = current_obj['audit'][x]
+                sacl = get_ace(ace, users, sacl)
+        except KeyError:
+            pass
+        current_obj['sacl'] = sacl
+
+        if current_obj.has_key('children'):
+            #pp.pprint(current_obj['children'])
+            get_acl2_cache(current_obj['children'], users, acls)
+    return (users, acls)
 def winperm(root_dir, perm_path):
     perm_fo = open(perm_path, 'r')
     perm_obj = json.load(perm_fo)
@@ -175,10 +232,15 @@ def winperm(root_dir, perm_path):
     user_cache_time = min(user_cache_times) / 1000
     print "User Cache Time: %s" % user_cache_time
     user_cache = get_user_cache(perm_obj)[0]
-    get_acl_cache(perm_obj, user_cache)
-    pp.pprint(perm_obj)
+    acl1_cache_times = timeit.Timer(partial(get_acl_cache, perm_obj, user_cache)).repeat(3, 1000)
+    acl1_cache_time = min(acl1_cache_times) / 1000
+    print "ACL1 Cache Time: %s" % acl1_cache_time
+    acl2_cache_times = timeit.Timer(partial(get_acl2_cache, perm_obj)).repeat(3, 1000)
+    acl2_cache_time = min(acl2_cache_times) / 1000
+    print "ACL2 Cache Time: %s" % acl2_cache_time
+    #pp.pprint(perm_obj)
     #pp.pprint(sec_users)
-    print "End Loop"
+
 
 
 
