@@ -8,6 +8,11 @@ import win32security
 import ntsecuritycon as con
 from functools import partial
 import copy
+import re
+
+import warnings
+with warnings.catch_warnings(record=True):
+    import scandir
 #translation to ntsecuritycon constants
 access_bits = {
     'READ_DATA': con.FILE_READ_DATA,
@@ -141,10 +146,48 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             #pp.pprint(current_obj['children'])
             get_acl_cache(current_obj['children'], users, acls)
     return (users, acls)
+def set_acl(name, entry_type, sec_obj):
+    children = {}
+    matched = False
+    for needle in sec_obj:
+        if (sec_obj[needle]['type'] == 'all' or entry_type == sec_obj[needle]['type']) and re.match(needle, name):
+            print 'found ya'
+            print needle
+            if entry_type == 'folder' and sec_obj[needle].has_key('children'):
+                children = sec_obj[needle]['children']
+            matched = True
+            break
+        else:
+            print "not a match, %s" % needle
+    if not matched:
+            try:
+                print 'Using __DEFAULT__'
+                pp.pprint(sec_obj['__DEFAULT__'])
+                children = sec_obj['__DEFAULT__']
+            except KeyError:
+                raise KeyError("Security obj is missing '__DEFAULT__' key.")
+    return children
+
+def set_acls(sec_obj, path):
+    try:
+        for entry in scandir.scandir(path):
+            if entry.is_symlink():
+                pass
+            elif entry.is_dir():
+                full_path = os.path.join(path, entry.name)
+                print full_path
+                children = set_acl(entry.name, 'folder', sec_obj)
+                set_acls(children, full_path)
+            else:
+                full_path = os.path.join(path, entry.name)
+                print full_path
+                set_acl(entry.name, 'file', sec_obj)
+    except OSError:
+        pass
 def winperm(root_dir, perm_path):
     perm_fo = open(perm_path, 'r')
     perm_obj = json.load(perm_fo)
-    pp.pprint(perm_obj)
+    #pp.pprint(perm_obj)
 
     users = {}
     acls = {}
@@ -153,9 +196,7 @@ def winperm(root_dir, perm_path):
     acl2_cache_time = min(acl2_cache_times) / 1000
     print "ACL2 Cache Time: %s" % acl2_cache_time'''
     users, acls = get_acl_cache(perm_obj)
-
-    pp.pprint(perm_obj)
-    pp.pprint(users)
+    set_acls(perm_obj, root_dir)
     #pp.pprint(sec_users)
 
 
