@@ -68,10 +68,25 @@
                                 "audit": [
                                     {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
                                 ]
+                            },
+                            "__DEFAULT__": {
+                              "type": "all",
+                              "owner": {"domain": "NYC", "name": "Administrator"},
+                              "acl": []
                             }
                         }
+                    },
+                    "__DEFAULT__": {
+                      "type": "all",
+                      "owner": {"domain": "NYC", "name": "Administrator"},
+                      "acl": []
                     }
                 }
+            },
+            "__DEFAULT__": {
+              "type": "all",
+              "owner": {"domain": "NYC", "name": "Administrator"},
+              "acl": []
             }
         }
     },
@@ -124,6 +139,11 @@
                                 "audit": [
                                     {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
                                 ]
+                            },
+                            "__DEFAULT__": {
+                              "type": "all",
+                              "owner": {"domain": "NYC", "name": "Administrator"},
+                              "acl": []
                             }
                         }
                     },
@@ -156,11 +176,36 @@
                                 "audit": [
                                     {"account": {"name": "Administrator", "domain": "NYC"}, "mask": ["READ_ACCESS"], "type": "allow"}
                                 ]
+                            },
+                            "__DEFAULT__": {
+                              "type": "all",
+                              "owner": {"domain": "NYC", "name": "Administrator"},
+                              "acl": []
                             }
                         }
+                    },
+                    "__DEFAULT__": {
+                      "type": "all",
+                      "owner": {"domain": "NYC", "name": "Administrator"},
+                      "acl": []
                     }
                 }
+            },
+            "__DEFAULT__": {
+              "type": "all",
+              "owner": {"domain": "NYC", "name": "Administrator"},
+              "acl": []
             }
+        },
+        "__DEFAULT__": {
+          "type": "all",
+          "owner": {"domain": "NYC", "name": "Administrator"},
+          "acl": []
         }
+    },
+    "__DEFAULT__": {
+      "type": "all",
+      "owner": {"domain": "NYC", "name": "Administrator"},
+      "acl": []
     }
 }
