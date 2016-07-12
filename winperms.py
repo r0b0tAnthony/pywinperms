@@ -41,7 +41,15 @@ access_bits = {
     'NO_PROPOGATE_INHERIT': con.NO_PROPAGATE_INHERIT_ACE,
     'INHERIT_ONLY': con.INHERIT_ONLY_ACE,
     'VALID_INHERIT_FLAGS': con.VALID_INHERIT_FLAGS,
-    'INHERITED_ACE': win32security.INHERITED_ACE
+    'INHERITED_ACE': win32security.INHERITED_ACE,
+    'DACL_SECURITY_INFO': win32security.DACL_SECURITY_INFORMATION,
+    'SACL_SECURITY_INFO': win32security.SACL_SECURITY_INFORMATION,
+    'OWNER_SECURITY_INFO': win32security.OWNER_SECURITY_INFORMATION,
+    'GROUP_SECURITY_INFO': win32security.GROUP_SECURITY_INFORMATION,
+    'UNPROTECTED_DACL': win32security.UNPROTECTED_DACL_SECURITY_INFORMATION,
+    'UNPROTECTED_SACL': win32security.UNPROTECTED_SACL_SECURITY_INFORMATION,
+    'PROTECTED_DACL': win32security.PROTECTED_DACL_SECURITY_INFORMATION,
+    'PROTECTED_SACL': win32security.PROTECTED_SACL_SECURITY_INFORMATION
 }
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -71,6 +79,8 @@ def get_mask(keys):
     for key in keys:
         try:
             mask = mask | access_bits[key]
+        except KeyError:
+            raise KeyError("The follow access mask key doesn't exist: %s" % key)
         except:
             pass
 
@@ -128,7 +138,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
                 ace = current_obj['acl'][x]
                 dacl = get_ace(ace, users, dacl)
         except KeyError as e:
-            raise KeyError("'%s' is not a valid security object! Missing acl parameter." % key)
+            raise
         else:
             current_obj['dacl'] = dacl
         sacl =  win32security.ACL();
@@ -146,26 +156,62 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             #pp.pprint(current_obj['children'])
             get_acl_cache(current_obj['children'], users, acls)
     return (users, acls)
-def set_acl(name, entry_type, sec_obj):
+def set_security_info(path, security_info, owner = None, group = None, dacl = None, sacl = None):
+    security_info_mask = get_mask(security_info)
+    #sd = win32security.GetFileSecurity (path, win32security.DACL_SECURITY_INFORMATION)
+    #sd.SetSecurityDescriptorDacl (1, dacl, 0)
+    win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, security_info_mask, owner, group, dacl, sacl)
+
+def set_acl(name, full_path, entry_type, sec_obj):
     children = {}
     matched = False
+    security_info = ['DACL_SECURITY_INFO', 'UNPROTECTED_DACL', 'OWNER_SECURITY_INFO']
     for needle in sec_obj:
-        if (sec_obj[needle]['type'] == 'all' or entry_type == sec_obj[needle]['type']) and re.match(needle, name):
-            print 'found ya'
-            print needle
-            if entry_type == 'folder' and sec_obj[needle].has_key('children'):
-                children = sec_obj[needle]['children']
-            matched = True
-            break
-        else:
-            print "not a match, %s" % needle
-    if not matched:
+        current_obj = sec_obj[needle]
+        if (current_obj['type'] == 'all' or entry_type == current_obj['type']) and re.match(needle, name):
             try:
-                print 'Using __DEFAULT__'
-                pp.pprint(sec_obj['__DEFAULT__'])
-                children = sec_obj['__DEFAULT__']
+                children = current_obj['children']
             except KeyError:
-                raise KeyError("Security obj is missing '__DEFAULT__' key.")
+                pass
+            print needle
+            matched = current_obj
+            break
+
+    if not matched:
+        try:
+            children = sec_obj['__DEFAULT__']
+            matched = sec_obj['__DEFAULT__']
+            print '__DEFAULT__'
+        except KeyError:
+            raise KeyError("Security obj is missing '__DEFAULT__' key.")
+
+    try:
+        if matched['sacl']:
+            security_info += ['SACL_SECURITY_INFO', 'UNPROTECTED_SACL']
+    except KeyError:
+        matched['sacl'] = None
+        pass
+    try:
+        if matched['group_sid']:
+            security_info += ['GROUP_SECURITY_INFO']
+    except KeyError:
+        matched['group_sid'] = None
+        pass
+    try:
+        if matched['ignore_inheritance']:
+            security_info.remove('UNPROTECTED_DACL')
+            security_info += ['PROTECTED_DACL']
+            try:
+                security_info.remove('UNPROTECTED_SACL')
+                security_info += ['PROTECTED_SACL']
+            except Exception:
+                pass
+    except KeyError:
+        pass
+    print security_info
+    pp.pprint(matched['dacl'])
+    set_security_info(full_path, security_info, matched['owner_sid'], matched['group_sid'], matched['dacl'], matched['sacl'])
+
     return children
 
 def set_acls(sec_obj, path):
@@ -176,7 +222,7 @@ def set_acls(sec_obj, path):
             elif entry.is_dir():
                 full_path = os.path.join(path, entry.name)
                 print full_path
-                children = set_acl(entry.name, 'folder', sec_obj)
+                children = set_acl(entry.name, full_path, 'folder', sec_obj)
                 set_acls(children, full_path)
             else:
                 full_path = os.path.join(path, entry.name)
