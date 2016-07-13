@@ -174,6 +174,7 @@ def set_acl(name, full_path, entry_type, sec_obj):
                     try:
                         children = current_obj['children']
                     except KeyError:
+                        children = {needle: current_obj}
                         pass
                     print needle
                     matched = current_obj
