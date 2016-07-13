@@ -166,24 +166,42 @@ def set_acl(name, full_path, entry_type, sec_obj):
     children = {}
     matched = False
     security_info = ['DACL_SECURITY_INFO', 'UNPROTECTED_DACL', 'OWNER_SECURITY_INFO']
-    for needle in sec_obj:
-        current_obj = sec_obj[needle]
-        if (current_obj['type'] == 'all' or entry_type == current_obj['type']) and re.match(needle, name):
+    if len(sec_obj) > 1:
+        for needle in sec_obj:
+            current_obj = sec_obj[needle]
             try:
-                children = current_obj['children']
-            except KeyError:
-                pass
-            print needle
-            matched = current_obj
-            break
+                if (current_obj['type'] == 'all' or entry_type == current_obj['type']) and re.match(needle, name):
+                    try:
+                        children = current_obj['children']
+                    except KeyError:
+                        pass
+                    print needle
+                    matched = current_obj
+                    break
+            except TypeError:
+                print "Current_obj"
+                pp.pprint(current_obj)
+                print "sec_obj"
+                pp.pprint(sec_obj)
+                raise
 
     if not matched:
         try:
-            children = sec_obj['__DEFAULT__']
             matched = sec_obj['__DEFAULT__']
             print '__DEFAULT__'
+            try:
+                children = sec_obj['__DEFAULT__']['children']
+            except KeyError:
+                children = {'__DEFAULT__': sec_obj['__DEFAULT__']}
+                pass
         except KeyError:
             raise KeyError("Security obj is missing '__DEFAULT__' key.")
+    try:
+        if matched['skip']:
+            print '!!Skipping!!'
+            return False
+    except KeyError:
+        pass
 
     try:
         if matched['sacl']:
@@ -208,8 +226,7 @@ def set_acl(name, full_path, entry_type, sec_obj):
                 pass
     except KeyError:
         pass
-    print security_info
-    pp.pprint(matched['dacl'])
+
     set_security_info(full_path, security_info, matched['owner_sid'], matched['group_sid'], matched['dacl'], matched['sacl'])
 
     return children
@@ -223,11 +240,12 @@ def set_acls(sec_obj, path):
                 full_path = os.path.join(path, entry.name)
                 print full_path
                 children = set_acl(entry.name, full_path, 'folder', sec_obj)
-                set_acls(children, full_path)
+                if children:
+                    set_acls(children, full_path)
             else:
                 full_path = os.path.join(path, entry.name)
                 print full_path
-                set_acl(entry.name, 'file', sec_obj)
+                set_acl(entry.name, full_path, 'file', sec_obj)
     except OSError:
         pass
 def winperm(root_dir, perm_path):
