@@ -327,6 +327,7 @@ def set_acl(name, full_path, entry_type, sec_obj):
 
 def set_acls(sec_obj, path):
     try:
+        #Use scandir to accelerate going thru files
         for entry in scandir.scandir(path):
             if entry.is_symlink():
                 pass
