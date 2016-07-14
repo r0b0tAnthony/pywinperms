@@ -68,6 +68,7 @@ access_bits = {
 empty_acl = win32security.ACL()
 
 pp = pprint.PrettyPrinter(indent=4)
+#For program level logging, not security obj level logging
 loglevel = 0
 
 def get_mask(keys):
