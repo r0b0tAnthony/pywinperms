@@ -343,10 +343,15 @@ def set_acls(sec_obj, path):
     except OSError:
         pass
 def winperm(root_dir, perm_path):
+    print "Starting to Set Permissions on %s" % root_dir
     #Read in perm_path json file
+    if loglevel > 1:
+        print 'Reading in Security Obj JSON'
     perm_fo = open(perm_path, 'r')
     perm_obj = json.load(perm_fo)
-    #pp.pprint(perm_obj)
+    if loglevel > 3:
+        print 'Processed Security Obj JSON'
+        pp.pprint(perm_obj)
 
     users = {}
     acls = {}
@@ -354,9 +359,14 @@ def winperm(root_dir, perm_path):
     '''acl2_cache_times = timeit.Timer(partial(get_acl_cache, perm_obj)).repeat(3, 1000)
     acl2_cache_time = min(acl2_cache_times) / 1000
     print "ACL2 Cache Time: %s" % acl2_cache_time'''
+    if loglevel > 1:
+        print 'Starting get_acl_cache'
     users, acls = get_acl_cache(perm_obj)
+    if loglevel > 1:
+        print 'Starting set_acls'
     set_acls(perm_obj, root_dir)
-    #pp.pprint(sec_users)
+
+    print 'Finished Setting Permissions'
 
 if __name__ == '__main__':
     parser_usage = "winperms.py -h root_dir perms_file"
@@ -376,5 +386,10 @@ if __name__ == '__main__':
         perms_file = os.path.abspath(args[1])
         if not os.path.isfile(perms_file) or os.path.splitext(perms_file)[1] != '.json':
             raise Exception("perms_file, %s, is either not a file or does not end with json ext." % perms_file)
+
+        try:
+            loglevel = options.log
+        except Exception:
+            pass
 
         winperm(root_dir,perms_file)
