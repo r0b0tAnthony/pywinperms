@@ -193,6 +193,12 @@ def set_acl(name, full_path, entry_type, sec_obj):
                 if (current_obj['type'] == 'all' or entry_type == current_obj['type']) and re.match(needle, name):
                     #Pass the matched security object's children on sub-containers will receive proper security objs
                     try:
+                        if current_obj['loglevel'] > 1:
+                            print "Matched %s to %s" % (full_path, needle)
+                    except KeyError:
+                        pass
+
+                    try:
                         children = current_obj['children']
                     except KeyError:
                         #If there are no children, take the current obj and set it as __DEFAULT__ so it applies for all sub-containers
@@ -208,12 +214,6 @@ def set_acl(name, full_path, entry_type, sec_obj):
                         pass
                     matched = current_obj
 
-                    try:
-                        if current_obj['loglevel'] > 1:
-                            print "Matched %s to %s" % (full_path, needle)
-                    except KeyError:
-                        pass
-
                     break
             except TypeError:
                 raise
@@ -228,23 +228,25 @@ def set_acl(name, full_path, entry_type, sec_obj):
                 #If no children defined, pass along current __DEFAULT__
                 children = {'__DEFAULT__': sec_obj['__DEFAULT__']}
                 pass
-
-            try:
-                if matched['loglevel'] > 1:
-                    print "Matched %s to %s" % (full_path, '__DEFAULT__')
-            except KeyError:
-                pass
+            else:
+                try:
+                    if matched['loglevel'] > 1:
+                        print "Matched %s to %s" % (full_path, '__DEFAULT__')
+                except KeyError:
+                    pass
         except KeyError:
             raise
     try:
         if matched['loglevel'] > 1:
             print "Type: %s" % entry_type
-            print "Security Object"
-            pp.pprint(sec_obj)
-            print "Matched Security Obj"
-            pp.pprint(matched)
-            print "Security Object Children"
-            pp.pprint(children)
+            if matched['loglevel'] > 2:
+                if matched['loglevel'] > 3:
+                    print "Security Object"
+                    pp.pprint(sec_obj)
+                print "Matched Security Obj"
+                pp.pprint(matched)
+                print "Security Object Children"
+                pp.pprint(children)
     except KeyError:
         pass
 
@@ -288,8 +290,9 @@ def set_acl(name, full_path, entry_type, sec_obj):
 
     try:
         if matched['loglevel'] > 1:
-            print "Security Information Bits"
-            pp.pprint(security_info)
+            if matched['loglevel'] > 2:
+                print "Security Information Bits"
+                pp.pprint(security_info)
             print "set_security_info successful for %s" % full_path
     except KeyError:
         pass
