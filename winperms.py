@@ -107,6 +107,7 @@ def get_account_sids(accounts, users = {}):
         try:
             user_key = account['domain'] + '/' + account['name']
             if not users.has_key(user_key.lower()):
+                #First part of returned tuple is the SID
                 sid = get_account(account['name'], account['domain'])[0]
                 users[user_key.lower()] = sid
         except KeyError:
@@ -115,13 +116,16 @@ def get_account_sids(accounts, users = {}):
 def get_account(name, domain = ''):
     return win32security.LookupAccountName(domain, name)
 def get_ace(ace, users, pyacl_obj):
+    #Compute the bits for access_mask
     access_mask = get_mask(ace['mask'])
+    #Find cached user SID
     sid = users[str(ace['account']['domain'] + '/' + ace['account']['name']).lower()]
     inherit_mask = 0
     try:
         inherit_mask = get_mask(ace['inherit'])
     except KeyError:
         pass
+    #Determine is the ACE is an allow or deny
     if ace['type'] == 'allow':
         pyacl_obj.AddAccessAllowedAceEx(win32security.ACL_REVISION, inherit_mask, access_mask, sid)
     elif ace['type'] == 'deny':
@@ -129,26 +133,32 @@ def get_ace(ace, users, pyacl_obj):
     else:
         raise ValueError('ACE access type must be allow or deny!')
     return pyacl_obj
+
 def get_acl_cache(sec_obj, users = {}, acls = {}):
     for key in sec_obj:
         current_obj = sec_obj[key]
         accounts = []
         print "Key: %s" % key
         try:
+            #Add to accounts list which is used to process out SIDs
             accounts += [ {"account": current_obj['owner']} ]
+            #Update the user SID cache
             users.update(get_account_sids(accounts, users))
             current_obj['owner_sid'] = users[str(current_obj['owner']['domain'] + '/' + current_obj['owner']['name']).lower()]
         except KeyError:
-            pp.pprint(current_obj['owner'])
             raise KeyError("'%s' is not a valid security object! Missing owner parameter." % key)
+        #Make sure security_obj type is valid
         try:
             if current_obj['type'] not in ['file', 'folder', 'all']:
                 raise Exception("Valid type values are file, folder, all. On '%s' security obj" % key)
         except KeyError:
             raise KeyError("'%s' is not a valid security object! Missing type parameter." % key)
+        #Initialize a blank PyACL
         dacl = win32security.ACL()
         try:
+            #Add to accounts list which is used to process out SIDs
             accounts += current_obj['acl']
+            #Update the user SID cache
             users.update(get_account_sids(accounts, users))
             for x in range(len(current_obj['acl'])):
                 ace = current_obj['acl'][x]
@@ -160,6 +170,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             raise
         else:
             current_obj['dacl'] = dacl
+        #Initialize a blank PyACL
         sacl =  win32security.ACL();
         try:
             accounts += current_obj['acl']
@@ -178,28 +189,36 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             #pp.pprint(current_obj['children'])
             get_acl_cache(current_obj['children'], users, acls)
     return (users, acls)
+
 def set_security_info(path, security_info, owner = None, group = None, dacl = None, sacl = None):
+    #Comput the bits for security_info
     security_info_mask = get_mask(security_info)
-    #sd = win32security.GetFileSecurity (path, win32security.DACL_SECURITY_INFORMATION)
-    #sd.SetSecurityDescriptorDacl (1, dacl, 0)
     win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, security_info_mask, owner, group, dacl, sacl)
 
 def set_acl(name, full_path, entry_type, sec_obj):
     children = {}
+    #will be False or the sec_obj that matches
     matched = False
+    #Setup the default security_info which says we are writing an unprotected DACL and Owner info
     security_info = ['DACL_SECURITY_INFO', 'UNPROTECTED_DACL', 'OWNER_SECURITY_INFO']
     print "Full Path: %s" % full_path
+    # We can assume that if is less than 2, then the sec_obj is __DEFAULT__
     if len(sec_obj) > 1:
         for needle in sec_obj:
             current_obj = sec_obj[needle]
             try:
+                #Check that security obj's type is all or matches the entry's type and that the regex is a match
                 if (current_obj['type'] == 'all' or entry_type == current_obj['type']) and re.match(needle, name):
+                    #Pass the matched security object's children on sub-containers will receive proper security objs
                     try:
                         children = current_obj['children']
                     except KeyError:
+                        #If there are no children, take the current obj and set it as __DEFAULT__ so it applies for all sub-containers
                         children = {'__DEFAULT__': copy.copy(current_obj)}
+                        #Set to empty ACL
                         children['__DEFAULT__']['acl'] = empty_acl
                         try:
+                            #Remove ignore_inheritance so ACL propogation happens
                             del children['__DEFAULT__']['ignore_inheritance']
                         except KeyError:
                             pass
@@ -215,18 +234,16 @@ def set_acl(name, full_path, entry_type, sec_obj):
 
                     break
             except TypeError:
-                print "Current_obj"
-                pp.pprint(current_obj)
-                print "sec_obj"
-                pp.pprint(sec_obj)
                 raise
-
+    #If no regex or type matches, apply the __DEFAULT__
     if not matched:
         try:
             matched = sec_obj['__DEFAULT__']
             try:
+                #Pass along __DEFAULT__ obj children to sub-containers
                 children = sec_obj['__DEFAULT__']['children']
             except KeyError:
+                #If no children defined, pass along current __DEFAULT__
                 children = {'__DEFAULT__': sec_obj['__DEFAULT__']}
                 pass
 
@@ -249,6 +266,7 @@ def set_acl(name, full_path, entry_type, sec_obj):
     except KeyError:
         pass
 
+    #Skip any matching security obj and don't go into sub-container
     try:
         if matched['skip']:
             try:
@@ -259,7 +277,7 @@ def set_acl(name, full_path, entry_type, sec_obj):
             return False
     except KeyError:
         pass
-
+    #Expand security_info with relevant flags
     try:
         if matched['sacl']:
             security_info += ['SACL_SECURITY_INFO', 'UNPROTECTED_SACL']
@@ -304,6 +322,7 @@ def set_acls(sec_obj, path):
             elif entry.is_dir():
                 full_path = os.path.join(path, entry.name)
                 children = set_acl(entry.name, full_path, 'folder', sec_obj)
+                #Only go into sub-container if not True/security_obj
                 if children:
                     set_acls(children, full_path)
             else:
@@ -312,6 +331,7 @@ def set_acls(sec_obj, path):
     except OSError:
         pass
 def winperm(root_dir, perm_path):
+    #Read in perm_path json file
     perm_fo = open(perm_path, 'r')
     perm_obj = json.load(perm_fo)
     #pp.pprint(perm_obj)
