@@ -120,15 +120,25 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
     for key in sec_obj:
         current_obj = sec_obj[key]
         accounts = []
-        print "Key: %s" % key
+        try:
+            if current_obj['loglevel'] > 1:
+                print "Start Processing ACL Cache for %s" % key
+        except KeyError:
+            pass
         try:
             #Add to accounts list which is used to process out SIDs
             accounts += [ {"account": current_obj['owner']} ]
             #Update the user SID cache
             users.update(get_account_sids(accounts, users))
             current_obj['owner_sid'] = users[str(current_obj['owner']['domain'] + '/' + current_obj['owner']['name']).lower()]
+            try:
+                if current_obj['loglevel'] > 2:
+                    print 'Set SID for Owner'
+            except KeyError:
+                pass
         except KeyError:
             raise KeyError("'%s' is not a valid security object! Missing owner parameter." % key)
+
         #Make sure security_obj type is valid
         try:
             if current_obj['type'] not in ['file', 'folder', 'all']:
@@ -152,8 +162,13 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             raise
         else:
             current_obj['dacl'] = dacl
+            try:
+                if current_obj['loglevel'] > 2:
+                    print 'Set DACL'
+            except KeyError:
+                pass
         #Initialize a blank PyACL
-        sacl =  win32security.ACL();
+        sacl =  win32security.ACL()
         try:
             accounts += current_obj['acl']
             users.update(get_account_sids(accounts, users))
@@ -165,11 +180,22 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
                 raise Exception('DACL is not valid!')
         except KeyError:
             pass
-        current_obj['sacl'] = sacl
+        else:
+            current_obj['sacl'] = sacl
+            try:
+                if current_obj['loglevel'] > 2:
+                    print 'Set SACL'
+            except KeyError:
+                pass
 
         if current_obj.has_key('children'):
             #pp.pprint(current_obj['children'])
             get_acl_cache(current_obj['children'], users, acls)
+        try:
+            if current_obj['loglevel'] > 1:
+                print "Finished Processing ACL Cache for %s" % key
+        except KeyError:
+            pass
     return (users, acls)
 
 def set_security_info(path, security_info, owner = None, group = None, dacl = None, sacl = None):
