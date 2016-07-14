@@ -27,9 +27,22 @@ access_bits = {
     'EXECUTE': con.FILE_EXECUTE,
     'TRAVERSE': con.FILE_TRAVERSE,
     'DELETE_CHILD': con.FILE_DELETE_CHILD,
+    'DELETE': con.DELETE,
+    'READ_CONTROL': con.READ_CONTROL,
     'READ_ATTRIBUTES': con.FILE_READ_ATTRIBUTES,
     'WRITE_ATTRIBUTES': con.FILE_WRITE_ATTRIBUTES,
-    'ALL_ACCESS': con.FILE_ALL_ACCESS,
+    'CUSTOM_ALL_ACCESS': (
+        con.STANDARD_RIGHTS_REQUIRED | con.SYNCHRONIZE | con.FILE_READ_DATA | con.FILE_LIST_DIRECTORY |
+        con.FILE_WRITE_DATA | con.FILE_ADD_FILE | con.FILE_APPEND_DATA | con.FILE_ADD_SUBDIRECTORY |
+        con.FILE_CREATE_PIPE_INSTANCE | con.FILE_READ_EA | con.FILE_WRITE_EA | con.FILE_EXECUTE |
+        con.FILE_TRAVERSE | con.FILE_DELETE_CHILD | con.FILE_READ_ATTRIBUTES | con.FILE_WRITE_ATTRIBUTES
+    ),
+    'CUSTOM_MODIFY': (
+        con.DELETE | con.READ_CONTROL | con.SYNCHRONIZE | con.FILE_READ_DATA | con.FILE_LIST_DIRECTORY |
+        con.FILE_WRITE_DATA | con.FILE_ADD_FILE | con.FILE_APPEND_DATA | con.FILE_ADD_SUBDIRECTORY |
+        con.FILE_CREATE_PIPE_INSTANCE | con.FILE_READ_EA | con.FILE_WRITE_EA | con.FILE_EXECUTE |
+        con.FILE_TRAVERSE | con.FILE_DELETE_CHILD | con.FILE_READ_ATTRIBUTES | con.FILE_WRITE_ATTRIBUTES
+    ),
     'GENERIC_READ': con.FILE_GENERIC_READ,
     'GENERIC_WRITE': con.FILE_GENERIC_WRITE,
     'GENERIC_EXECUTE': con.FILE_GENERIC_EXECUTE,
@@ -51,6 +64,8 @@ access_bits = {
     'PROTECTED_DACL': win32security.PROTECTED_DACL_SECURITY_INFORMATION,
     'PROTECTED_SACL': win32security.PROTECTED_SACL_SECURITY_INFORMATION
 }
+
+empty_acl = win32security.ACL()
 
 pp = pprint.PrettyPrinter(indent=4)
 '''
@@ -118,6 +133,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
     for key in sec_obj:
         current_obj = sec_obj[key]
         accounts = []
+        print "Key: %s" % key
         try:
             accounts += [ {"account": current_obj['owner']} ]
             users.update(get_account_sids(accounts, users))
@@ -137,6 +153,9 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             for x in range(len(current_obj['acl'])):
                 ace = current_obj['acl'][x]
                 dacl = get_ace(ace, users, dacl)
+
+            if not dacl.IsValid():
+                raise Exception('DACL is not valid!')
         except KeyError as e:
             raise
         else:
@@ -148,6 +167,9 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             for x in range(len(current_obj['audit'])):
                 ace = current_obj['audit'][x]
                 sacl = get_ace(ace, users, sacl)
+
+            if not sacl.IsValid():
+                raise Exception('DACL is not valid!')
         except KeyError:
             pass
         current_obj['sacl'] = sacl
@@ -166,6 +188,7 @@ def set_acl(name, full_path, entry_type, sec_obj):
     children = {}
     matched = False
     security_info = ['DACL_SECURITY_INFO', 'UNPROTECTED_DACL', 'OWNER_SECURITY_INFO']
+    print "Full Path: %s" % full_path
     if len(sec_obj) > 1:
         for needle in sec_obj:
             current_obj = sec_obj[needle]
@@ -174,10 +197,22 @@ def set_acl(name, full_path, entry_type, sec_obj):
                     try:
                         children = current_obj['children']
                     except KeyError:
-                        children = {needle: current_obj}
+                        children = {'__DEFAULT__': copy.copy(current_obj)}
+                        children['__DEFAULT__']['acl'] = empty_acl
+                        try:
+                            del children['__DEFAULT__']['ignore_inheritance']
+                        except KeyError:
+                            pass
+
                         pass
-                    print needle
                     matched = current_obj
+
+                    try:
+                        if current_obj['loglevel'] > 1:
+                            print "Matched %s to %s" % (full_path, needle)
+                    except KeyError:
+                        pass
+
                     break
             except TypeError:
                 print "Current_obj"
@@ -189,17 +224,38 @@ def set_acl(name, full_path, entry_type, sec_obj):
     if not matched:
         try:
             matched = sec_obj['__DEFAULT__']
-            print '__DEFAULT__'
             try:
                 children = sec_obj['__DEFAULT__']['children']
             except KeyError:
                 children = {'__DEFAULT__': sec_obj['__DEFAULT__']}
                 pass
+
+            try:
+                if matched['loglevel'] > 1:
+                    print "Matched %s to %s" % (full_path, '__DEFAULT__')
+            except KeyError:
+                pass
         except KeyError:
-            raise KeyError("Security obj is missing '__DEFAULT__' key.")
+            raise
+    try:
+        if matched['loglevel'] > 1:
+            print "Type: %s" % entry_type
+            print "Security Object"
+            pp.pprint(sec_obj)
+            print "Matched Security Obj"
+            pp.pprint(matched)
+            print "Security Object Children"
+            pp.pprint(children)
+    except KeyError:
+        pass
+
     try:
         if matched['skip']:
-            print '!!Skipping!!'
+            try:
+                if matched['loglevel'] > 1:
+                    print 'Skipping'
+            except KeyError:
+                pass
             return False
     except KeyError:
         pass
@@ -230,6 +286,14 @@ def set_acl(name, full_path, entry_type, sec_obj):
 
     set_security_info(full_path, security_info, matched['owner_sid'], matched['group_sid'], matched['dacl'], matched['sacl'])
 
+    try:
+        if matched['loglevel'] > 1:
+            print "Security Information Bits"
+            pp.pprint(security_info)
+            print "set_security_info successful for %s" % full_path
+    except KeyError:
+        pass
+
     return children
 
 def set_acls(sec_obj, path):
@@ -239,13 +303,11 @@ def set_acls(sec_obj, path):
                 pass
             elif entry.is_dir():
                 full_path = os.path.join(path, entry.name)
-                print full_path
                 children = set_acl(entry.name, full_path, 'folder', sec_obj)
                 if children:
                     set_acls(children, full_path)
             else:
                 full_path = os.path.join(path, entry.name)
-                print full_path
                 set_acl(entry.name, full_path, 'file', sec_obj)
     except OSError:
         pass
@@ -263,9 +325,6 @@ def winperm(root_dir, perm_path):
     users, acls = get_acl_cache(perm_obj)
     set_acls(perm_obj, root_dir)
     #pp.pprint(sec_users)
-
-
-
 
 if __name__ == '__main__':
     parser_usage = "winperms.py -h root_dir perms_file"
