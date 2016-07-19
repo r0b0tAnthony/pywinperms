@@ -209,6 +209,8 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
         except KeyError:
             pass
 
+        current_obj['security_info'] = get_mask(current_obj['security_info'])
+
         if current_obj.has_key('children'):
             #pp.pprint(current_obj['children'])
             get_acl_cache(current_obj['children'], users, acls)
@@ -220,9 +222,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
     return (users, acls)
 
 def set_security_info(path, security_info, owner = None, group = None, dacl = None, sacl = None):
-    #Comput the bits for security_info
-    security_info_mask = get_mask(security_info)
-    win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, security_info_mask, owner, group, dacl, sacl)
+    win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, security_info, owner, group, dacl, sacl)
 
 def set_acl(name, full_path, entry_type, sec_obj):
     children = {}
@@ -247,14 +247,17 @@ def set_acl(name, full_path, entry_type, sec_obj):
                     try:
                         children = current_obj['children']
                     except KeyError:
-                        #If there are no children, take the current obj and set it as __DEFAULT__ so it applies for all sub-containers
-                        children = {'__DEFAULT__': copy.copy(current_obj)}
-                        #Set to empty ACL
-                        children['__DEFAULT__']['dacl'] = empty_acl
-                        children['__DEFAULT__']['sacl'] = empty_acl
                         try:
-                            #Remove ignore_inheritance so ACL propogation happens
-                            del children['__DEFAULT__']['ignore_inheritance']
+                            if not current_obj['computed']:
+                                #If there are no children, take the current obj and set it as __DEFAULT__ so it applies for all sub-containers
+                                children = {'__DEFAULT__': copy.copy(current_obj)}
+                                #Set to empty ACL
+                                children['__DEFAULT__']['dacl'] = empty_acl
+                                children['__DEFAULT__']['sacl'] = empty_acl
+                                children['__DEFAULT__']['security_info'] = children['__DEFAULT__']['security_info'] ^ (access_bits['PROTECTED_SACL'] | access_bits['PROTECTED_DACL'])
+                                children['__DEFAULT__']['computed'] = True
+                            else:
+                                children = {'__DEFAULT__': current_obj}
                         except KeyError:
                             pass
 
@@ -272,15 +275,19 @@ def set_acl(name, full_path, entry_type, sec_obj):
                 #Pass along __DEFAULT__ obj children to sub-containers
                 children = sec_obj['__DEFAULT__']['children']
             except KeyError:
-                #If no children defined, pass along current __DEFAULT__
-                children = {'__DEFAULT__': copy.copy(sec_obj['__DEFAULT__'])}
-                children['__DEFAULT__']['dacl'] = empty_acl
-                children['__DEFAULT__']['sacl'] = empty_acl
                 try:
-                    #Remove ignore_inheritance so ACL propogation happens
-                    del children['__DEFAULT__']['ignore_inheritance']
+                    if not children['__DEFAULT__']['computed']:
+                        #If no children defined, pass along current __DEFAULT__
+                        children = {'__DEFAULT__': copy.copy(matched)}
+                        children['__DEFAULT__']['dacl'] = empty_acl
+                        children['__DEFAULT__']['sacl'] = empty_acl
+                        children['__DEFAULT__']['security_info'] = children['__DEFAULT__']['security_info'] ^ (access_bits['PROTECTED_SACL'] | access_bits['PROTECTED_DACL'])
+                        children['__DEFAULT__']['computed'] = True
+                    else:
+                        children = {'__DEFAULT__': sec_obj['__DEFAULT__']}
                 except KeyError:
                     pass
+
                 pass
             else:
                 try:
@@ -369,6 +376,7 @@ def winperm(root_dir, perm_path):
     if loglevel > 1:
         print 'Starting set_acls'
 
+    set_acls(perm_obj, root_dir)
     acl_time = 1000000000000
     N = 3
     for i in range(N):
@@ -378,7 +386,6 @@ def winperm(root_dir, perm_path):
                                 timeit.timeit(partial(set_acls, perm_obj, root_dir), number=1))
     print('took {0:.3f}s'.format(
           acl_time))
-    #set_acls(perm_obj, root_dir)
 
     print 'Finished Setting Permissions'
 
