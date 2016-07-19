@@ -120,6 +120,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
     for key in sec_obj:
         current_obj = sec_obj[key]
         accounts = []
+        current_obj['security_info'] = ['DACL_SECURITY_INFO', 'UNPROTECTED_DACL', 'OWNER_SECURITY_INFO']
         try:
             if current_obj['loglevel'] > 1:
                 print "Start Processing ACL Cache for %s" % key
@@ -170,7 +171,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
         #Initialize a blank PyACL
         sacl =  win32security.ACL()
         try:
-            accounts += current_obj['acl']
+            accounts += current_obj['sacl']
             users.update(get_account_sids(accounts, users))
             for x in range(len(current_obj['audit'])):
                 ace = current_obj['audit'][x]
@@ -179,14 +180,34 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             if not sacl.IsValid():
                 raise Exception('DACL is not valid!')
         except KeyError:
+            current_obj['sacl'] = None
             pass
         else:
             current_obj['sacl'] = sacl
+            current_obj['security_info'] += ['SACL_SECURITY_INFO', 'UNPROTECTED_SACL']
             try:
                 if current_obj['loglevel'] > 2:
                     print 'Set SACL'
             except KeyError:
                 pass
+
+        try:
+            if current_obj['group_sid']:
+                current_obj['security_info'] += ['GROUP_SECURITY_INFO']
+        except KeyError:
+            current_obj['group_sid'] = None
+            pass
+        try:
+            if current_obj['ignore_inheritance']:
+                current_obj['security_info'].remove('UNPROTECTED_DACL')
+                current_obj['security_info'] += ['PROTECTED_DACL']
+                try:
+                    current_obj['security_info'].remove('UNPROTECTED_SACL')
+                    current_obj['security_info'] += ['PROTECTED_SACL']
+                except Exception:
+                    pass
+        except KeyError:
+            pass
 
         if current_obj.has_key('children'):
             #pp.pprint(current_obj['children'])
@@ -208,7 +229,6 @@ def set_acl(name, full_path, entry_type, sec_obj):
     #will be False or the sec_obj that matches
     matched = False
     #Setup the default security_info which says we are writing an unprotected DACL and Owner info
-    security_info = ['DACL_SECURITY_INFO', 'UNPROTECTED_DACL', 'OWNER_SECURITY_INFO']
     print "Full Path: %s" % full_path
     # We can assume that if is less than 2, then the sec_obj is __DEFAULT__
     if len(sec_obj) > 1:
@@ -230,7 +250,8 @@ def set_acl(name, full_path, entry_type, sec_obj):
                         #If there are no children, take the current obj and set it as __DEFAULT__ so it applies for all sub-containers
                         children = {'__DEFAULT__': copy.copy(current_obj)}
                         #Set to empty ACL
-                        children['__DEFAULT__']['acl'] = empty_acl
+                        children['__DEFAULT__']['dacl'] = empty_acl
+                        children['__DEFAULT__']['sacl'] = empty_acl
                         try:
                             #Remove ignore_inheritance so ACL propogation happens
                             del children['__DEFAULT__']['ignore_inheritance']
@@ -252,7 +273,14 @@ def set_acl(name, full_path, entry_type, sec_obj):
                 children = sec_obj['__DEFAULT__']['children']
             except KeyError:
                 #If no children defined, pass along current __DEFAULT__
-                children = {'__DEFAULT__': sec_obj['__DEFAULT__']}
+                children = {'__DEFAULT__': copy.copy(sec_obj['__DEFAULT__'])}
+                children['__DEFAULT__']['dacl'] = empty_acl
+                children['__DEFAULT__']['sacl'] = empty_acl
+                try:
+                    #Remove ignore_inheritance so ACL propogation happens
+                    del children['__DEFAULT__']['ignore_inheritance']
+                except KeyError:
+                    pass
                 pass
             else:
                 try:
@@ -287,32 +315,8 @@ def set_acl(name, full_path, entry_type, sec_obj):
             return False
     except KeyError:
         pass
-    #Expand security_info with relevant flags
-    try:
-        if matched['sacl']:
-            security_info += ['SACL_SECURITY_INFO', 'UNPROTECTED_SACL']
-    except KeyError:
-        matched['sacl'] = None
-        pass
-    try:
-        if matched['group_sid']:
-            security_info += ['GROUP_SECURITY_INFO']
-    except KeyError:
-        matched['group_sid'] = None
-        pass
-    try:
-        if matched['ignore_inheritance']:
-            security_info.remove('UNPROTECTED_DACL')
-            security_info += ['PROTECTED_DACL']
-            try:
-                security_info.remove('UNPROTECTED_SACL')
-                security_info += ['PROTECTED_SACL']
-            except Exception:
-                pass
-    except KeyError:
-        pass
 
-    set_security_info(full_path, security_info, matched['owner_sid'], matched['group_sid'], matched['dacl'], matched['sacl'])
+    set_security_info(full_path, matched['security_info'], matched['owner_sid'], matched['group_sid'], matched['dacl'], matched['sacl'])
 
     try:
         if matched['loglevel'] > 1:
@@ -343,7 +347,7 @@ def set_acls(sec_obj, path):
     except OSError:
         pass
 def winperm(root_dir, perm_path):
-    print "Starting to Set Permissions on %s" % root_dir
+    print "Starting to Set Permissions in %s" % root_dir
     #Read in perm_path json file
     if loglevel > 1:
         print 'Reading in Security Obj JSON'
@@ -364,7 +368,17 @@ def winperm(root_dir, perm_path):
     users, acls = get_acl_cache(perm_obj)
     if loglevel > 1:
         print 'Starting set_acls'
-    set_acls(perm_obj, root_dir)
+
+    acl_time = 1000000000000
+    N = 3
+    for i in range(N):
+        print('Benchmarking walks on {0}, repeat {1}/{2}...'.format(
+            root_dir, i + 1, N))
+        acl_time = min(acl_time,
+                                timeit.timeit(partial(set_acls, perm_obj, root_dir), number=1))
+    print('took {0:.3f}s'.format(
+          acl_time))
+    #set_acls(perm_obj, root_dir)
 
     print 'Finished Setting Permissions'
 
@@ -372,7 +386,7 @@ if __name__ == '__main__':
     parser_usage = "winperms.py -h root_dir perms_file"
     parser = optparse.OptionParser(usage=parser_usage)
 
-    parser.add_option('-l', '--log', type='choice', choices=[1,2,3,4,5], default=1,
+    parser.add_option('-l', '--log', type='choice', choices=["1","2","3","4","5"], default=1,
                       help='level of log verbosity "%default"')
     options, args = parser.parse_args()
 
