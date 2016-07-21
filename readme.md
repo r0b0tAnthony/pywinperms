@@ -43,7 +43,50 @@ Security Objects follow the JSON standard for syntax.
           "__DEFAULT__": {
             "type": "all",
             "owner": {"account": {"name": "Administrators", "domain": "NYC"}},
-            "acl": [],
+            "acl": [
+                {"account": {"name": "staff", "domain": "NYC"}, "mask": ["CUSTOM_MODIFY"], "type": "allow", "inherit": ["OBJECT_INHERIT", "CONTAINER_INHERIT"]}
+            ],
             "ignore_inheritance": "true"
+            children: {
+                "__DEFAULT__": {
+                  "type": "all",
+                  "owner": {"account": {"name": "Administrators", "domain": "NYC"}},
+                  "acl": []
+                }
+            }
           }
     }
+
+#### Security Object Parameters:
+**Matched/needle:** a regex needle that is matched against a file and/or folder. *There is also a special `__DEFAULT__` that is REQUIRED to be at each hierarchical level. It is defaulted to when no match is found.* **REQUIRED**
+
+**type:** valid values are either `file`, `folder`, or `all`. *`__DEFAULT__` must be a type of all.* **REQUIRED**
+
+**owner:** An account object setting either a user or group as the owner of this object. **REQUIRED**
+
+`{"account": {"name": "Account Name", "domain": "NYC"}}`
+
+**acl:** A list/array of ACE objects. **REQUIRED**
+
+`{"account": {"name": "Account Name", "domain": "NYC"}, "mask": ["GENERIC_READ", "GENERIC_WRITE"], "type": "allow", "inherit": ["OBJECT_INHERIT", "CONTAINER_INHERIT", "NO_PROPOGATE_INHERIT"]}`
+
+**children:** An object/dictionary of security objects.
+
+**skip:** A boolean string that will skip any matching objects and their children.
+
+**ignore_inheritance:** A boolean string that cause inheritance from the parents to be ignored by protecting the ACL.
+
+**loglevel:** An integer 1 thru 5 that set's logging on a per security object basis.
+
+#### ACE Object Parameters
+**account:** A dictionary with a `name` and `domain` key. **REQUIRED**
+
+**mask:** A list of access flags. **REQUIRED**
+
+Valid flags: `READ_DATA`, `LIST_DIRECTORY`, `WRITE_DATA`, `ADD_FILE`, `APPEND_DATA`, `ADD_SUBDIRECTORY`, `CREATE_PIPE_INSTANCE`, `READ_EA`, `WRITE_EA`, `EXECUTE`, `TRAVERSE`, `DELETE_CHILD`, `DELETE`, `READ_CONTROL`, `READ_ATTRIBUTES`, `WRITE_ATTRIBUTES`, `CUSTOM_ALL_ACCESS`, `CUSTOM_MODIFY`, `GENERIC_READ`, `GENERIC_WRITE`, `GENERIC_EXECUTE`, `WRITE_DAC`, `WRITE_OWNER`, `SYNCHRONIZE`
+
+**type:** Either `allow` or `deny`. **REQUIRED**
+
+**inherit:** A list of inherit flags.
+
+Valid flags: `OBJECT_INHERIT`, `CONTAINER_INHERIT`, `NO_PROPOGATE_INHERIT`, `INHERIT_ONLY`
