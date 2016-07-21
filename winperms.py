@@ -360,8 +360,6 @@ def set_acls(sec_obj, path):
                 #Only go into sub-container if not True/security_obj
                 if children:
                     set_acls(children, full_path)
-                else:
-                    print "No Children"
             else:
                 full_path = os.path.join(path, entry.name)
                 set_acl(entry.name, full_path, 'file', sec_obj)
