@@ -12,7 +12,7 @@ Pywinperms is a python 2.7.x command line program that can hierarchically and dy
 ## How Does pywinperms work?
 
 ### Overview
-Pywinperms works using the pywin32 library, specifically win32security, and scandir, which is faster on file objects than 2.7.x regular os.walk(). Pywinperms reads in a JSON file that hierarchically represents folder and/or files you want permissions applied to, known as security objects. It can dynamically match names using regex the current file or folder's name, not the entire path.
+Pywinperms works using the pywin32 library, specifically win32security, and scandir, which is faster on file objects than 2.7.x regular os.walk(). Pywinperms reads in a JSON file that hierarchically represents folder and/or files you want permissions applied to, known as security objects. It can dynamically match security objects using regex against the current file or folder's name, not the entire path.
 
 ### The Security Object JSON
 Security Objects follow the JSON standard for syntax.
@@ -90,3 +90,18 @@ Valid flags: `READ_DATA`, `LIST_DIRECTORY`, `WRITE_DATA`, `ADD_FILE`, `APPEND_DA
 **inherit:** A list of inherit flags.
 
 Valid flags: `OBJECT_INHERIT`, `CONTAINER_INHERIT`, `NO_PROPOGATE_INHERIT`, `INHERIT_ONLY`
+
+### Command line
+
+#### Example
+`python winperms.py C:\path\to\folder C:\path\to\security_obj.json`
+
+#### Parameters
+**{1}:** An absolute path to the containing folder you want permissions applied to. i.e. `C:\foo\bar` will not apply permissions to `bar` but the contents inside `bar`
+
+**{2}:** An absolute path to the JSON file containing security objects.
+
+#### flags
+**-h** Help flag
+
+**-l** Set the global logging level. `1` thru `5`, where one is minimal logging. Does *not* affect security object level logging.
