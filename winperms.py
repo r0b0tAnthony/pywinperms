@@ -131,10 +131,10 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             pass
         try:
             #Add to accounts list which is used to process out SIDs
-            accounts += current_obj['owner'] 
+            accounts += [current_obj['owner']]
             #Update the user SID cache
             users.update(get_account_sids(accounts, users))
-            current_obj['owner_sid'] = users[str(current_obj['owner']['domain'] + '/' + current_obj['owner']['name']).lower()]
+            current_obj['owner_sid'] = users[str(current_obj['owner']['account']['domain'] + '/' + current_obj['owner']['account']['name']).lower()]
             try:
                 if current_obj['loglevel'] > 2:
                     print 'Set SID for Owner'
