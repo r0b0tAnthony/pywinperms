@@ -14,7 +14,7 @@ with warnings.catch_warnings(record=True):
     import win32security
     import pywintypes
     import ntsecuritycon as con
-    
+
 #translation to ntsecuritycon constants
 access_bits = {
     'READ_DATA': con.FILE_READ_DATA,
@@ -131,7 +131,7 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
             pass
         try:
             #Add to accounts list which is used to process out SIDs
-            accounts += [ {"account": current_obj['owner']} ]
+            accounts += current_obj['owner'] 
             #Update the user SID cache
             users.update(get_account_sids(accounts, users))
             current_obj['owner_sid'] = users[str(current_obj['owner']['domain'] + '/' + current_obj['owner']['name']).lower()]
