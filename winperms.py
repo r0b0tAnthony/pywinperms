@@ -5,6 +5,7 @@ import json
 import timeit
 import win32api
 import win32security
+import pywintypes
 import ntsecuritycon as con
 from functools import partial
 import copy
@@ -65,6 +66,7 @@ access_bits = {
     'PROTECTED_SACL': win32security.PROTECTED_SACL_SECURITY_INFORMATION
 }
 
+pywinerrors = list()
 empty_acl = win32security.ACL()
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -222,14 +224,28 @@ def get_acl_cache(sec_obj, users = {}, acls = {}):
     return (users, acls)
 
 def set_security_info(path, security_info, owner = None, group = None, dacl = None, sacl = None):
-    win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, security_info, owner, group, dacl, sacl)
+    try:
+        win32security.SetNamedSecurityInfo(path, win32security.SE_FILE_OBJECT, security_info, owner, group, dacl, sacl)
+    except pywintypes.error as e:
+        set_pywin_errors(path, e)
+        pass
+def set_pywin_errors(path, error):
+    global pywinerrors
+    pywinerrors += [{'path': path, 'error': error}]
+
+def print_pywin_errors(errors):
+    for x in range(len(errors)):
+        if x == 0:
+            print 'The following pywintypes.errors occured in set_security_info:'
+        print "- Error: '%s' on path %s" % (errors[x]['error'][2], errors[x]['path'])
 
 def set_acl(name, full_path, entry_type, sec_obj):
     children = {}
     #will be False or the sec_obj that matches
     matched = False
     #Setup the default security_info which says we are writing an unprotected DACL and Owner info
-    print "Full Path: %s" % full_path
+    if loglevel > 1:
+        print "Full Path: %s" % full_path
     # We can assume that if is less than 2, then the sec_obj is __DEFAULT__
     if len(sec_obj) > 1:
         for needle in sec_obj:
@@ -256,11 +272,9 @@ def set_acl(name, full_path, entry_type, sec_obj):
                                 children['__DEFAULT__']['sacl'] = empty_acl
                                 children['__DEFAULT__']['security_info'] = children['__DEFAULT__']['security_info'] ^ (access_bits['PROTECTED_SACL'] | access_bits['PROTECTED_DACL'])
                                 children['__DEFAULT__']['computed'] = True
-                            else:
-                                children = {'__DEFAULT__': current_obj}
                         except KeyError:
+                            children = {'__DEFAULT__': current_obj}
                             pass
-
                         pass
                     matched = current_obj
 
@@ -283,11 +297,9 @@ def set_acl(name, full_path, entry_type, sec_obj):
                         children['__DEFAULT__']['sacl'] = empty_acl
                         children['__DEFAULT__']['security_info'] = children['__DEFAULT__']['security_info'] ^ (access_bits['PROTECTED_SACL'] | access_bits['PROTECTED_DACL'])
                         children['__DEFAULT__']['computed'] = True
-                    else:
-                        children = {'__DEFAULT__': sec_obj['__DEFAULT__']}
                 except KeyError:
+                    children = {'__DEFAULT__': sec_obj['__DEFAULT__']}
                     pass
-
                 pass
             else:
                 try:
@@ -348,6 +360,8 @@ def set_acls(sec_obj, path):
                 #Only go into sub-container if not True/security_obj
                 if children:
                     set_acls(children, full_path)
+                else:
+                    print "No Children"
             else:
                 full_path = os.path.join(path, entry.name)
                 set_acl(entry.name, full_path, 'file', sec_obj)
@@ -386,7 +400,7 @@ def winperm(root_dir, perm_path):
                                 timeit.timeit(partial(set_acls, perm_obj, root_dir), number=1))
     print('took {0:.3f}s'.format(
           acl_time))
-
+    print_pywin_errors(pywinerrors)
     print 'Finished Setting Permissions'
 
 if __name__ == '__main__':
