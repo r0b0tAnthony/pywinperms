@@ -57,7 +57,7 @@ Security Objects follow the JSON standard for syntax.
           }
     }
 
-#### Security Object Parameters:
+#### Security Object Properties:
 **Matched/needle:** a regex needle that is matched against a file and/or folder. *There is also a special `__DEFAULT__` that is REQUIRED to be at each hierarchical level. It is defaulted to when no match is found.* **REQUIRED**
 
 **type:** valid values are either `file`, `folder`, or `all`. *`__DEFAULT__` must be a type of all.* **REQUIRED**
@@ -78,7 +78,7 @@ Security Objects follow the JSON standard for syntax.
 
 **loglevel:** An integer 1 thru 5 that set's logging on a per security object basis.
 
-#### ACE Object Parameters
+#### ACE Object Properties
 **account:** A dictionary with a `name` and `domain` key. **REQUIRED**
 
 **mask:** A list of access flags. **REQUIRED**
