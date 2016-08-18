@@ -342,7 +342,7 @@ def set_acl(name, full_path, entry_type, sec_obj):
         if matched['loglevel'] > 1:
             if matched['loglevel'] > 2:
                 print "Security Information Bits"
-                pp.pprint(security_info)
+                pp.pprint(matched['security_info'])
             print "set_security_info successful for %s" % full_path
     except KeyError:
         pass
