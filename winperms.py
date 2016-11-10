@@ -362,7 +362,8 @@ def set_acls(sec_obj, path):
                 if children:
                     set_acls(children, full_path)
                 else:
-                    print "No Children"
+                    if loglevel > 2:
+                        print "No Children Defined in Schema for %s" % entry.name
             else:
                 full_path = os.path.join(path, entry.name)
                 set_acl(entry.name, full_path, 'file', sec_obj)
@@ -381,10 +382,6 @@ def winperm(root_dir, perm_path):
 
     users = {}
     acls = {}
-    print "Looping"
-    '''acl2_cache_times = timeit.Timer(partial(get_acl_cache, perm_obj)).repeat(3, 1000)
-    acl2_cache_time = min(acl2_cache_times) / 1000
-    print "ACL2 Cache Time: %s" % acl2_cache_time'''
     if loglevel > 1:
         print 'Starting get_acl_cache'
     users, acls = get_acl_cache(perm_obj)
