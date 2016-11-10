@@ -392,15 +392,6 @@ def winperm(root_dir, perm_path):
         print 'Starting set_acls'
 
     set_acls(perm_obj, root_dir)
-    acl_time = 1000000000000
-    N = 3
-    for i in range(N):
-        print('Benchmarking walks on {0}, repeat {1}/{2}...'.format(
-            root_dir, i + 1, N))
-        acl_time = min(acl_time,
-                                timeit.timeit(partial(set_acls, perm_obj, root_dir), number=1))
-    print('took {0:.3f}s'.format(
-          acl_time))
     print_pywin_errors(pywinerrors)
     print 'Finished Setting Permissions'
 
