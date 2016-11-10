@@ -3,18 +3,19 @@ import optparse
 import pprint
 import json
 import re
-
+from collections import OrderedDict
+import copy
 def get_sec_obj(name, children = None):
-    sec_obj = {
-        name: {
-        },
-        '__DEFAULT__':{
-            'type': 'all',
-            "owner": {"account": {"name": "Domain Admins", "domain": "NYC"}},
-            "acl": [],
-            'skip': 'true'
-        }
-    }
+    settings = OrderedDict()
+    settings['type'] = 'all'
+    settings['owner'] = {"account": {"name": "Domain Admins", "domain": "NYC"}}
+    settings['acl'] = []
+    settings['skip'] = 'true'
+
+    sec_obj = OrderedDict()
+    sec_obj[name] = settings
+    sec_obj['__DEFAULT__'] = copy.deepcopy(settings)
+
     if children != None or len(children) > 1:
         sec_obj[name]['children'] = children
 
@@ -25,13 +26,13 @@ def build_sec_obj(relative_path, json_path):
     path_components = relative_path.split(os.sep)
     path_components.reverse()
     pprint.pprint(path_components)
-    sec_obj = {}
+    sec_obj = OrderedDict()
 
     for component in path_components:
         sec_obj = get_sec_obj(component, sec_obj)
 
     with open(json_path, 'w') as f:
-        json.dump(sec_obj, f, indent=4, separators=(',', ': '), ensure_ascii=False, sort_keys=True)
+        json.dump(sec_obj, f, indent=4, separators=(',', ': '), ensure_ascii=False)
 
 
 if __name__ == '__main__':
