@@ -1,5 +1,5 @@
 import os, sys
-import optparse
+import argparse
 import pprint
 import json
 import re
@@ -22,7 +22,7 @@ def get_sec_obj(name, children = None):
     return sec_obj
 
 
-def build_sec_obj(relative_path, json_path):
+def build_sec_obj(relative_path):
     path_components = relative_path.split(os.sep)
     path_components.reverse()
     pprint.pprint(path_components)
@@ -31,28 +31,44 @@ def build_sec_obj(relative_path, json_path):
     for component in path_components:
         sec_obj = get_sec_obj(component, sec_obj)
 
-    with open(json_path, 'w') as f:
-        json.dump(sec_obj, f, indent=4, separators=(',', ': '), ensure_ascii=False)
+    return sec_obj
 
 
 if __name__ == '__main__':
-    parser_usage = "winperms.py -h start_dir target_dir output_file"
-    parser = optparse.OptionParser(usage=parser_usage)
-    options, args = parser.parse_args()
+    parser = argparse.ArgumentParser(description='Generate Security Object JSON Schemas from Existing Directory Structures')
+    parser.add_argument(
+        '-s',
+        '--start',
+        help='Start/root directory from which relative path structures will be computed.',
+        dest='startPath',
+        required=True
+    )
+    parser.add_argument(
+        '-t',
+        '--target',
+        help='Absolute paths to target directories that are relative to start directory(-s).',
+        dest='targetPath',
+        required=True
+    )
+    parser.add_argument(
+        '-o',
+        '--output',
+        help='Path to write generated json schema. Must end in .json.',
+        dest='jsonOutput',
+        type=argparse.FileType('w'),
+        required=True
+    )
+    args = parser.parse_args()
 
-    if len(args) < 3:
-        raise Exception('You must provide a path from which to construct the security objects and a path to save the json file.')
+    start_path = os.path.abspath(args.startPath)
+
+    try:
+        relative_path = os.path.relpath(os.path.abspath(args.targetPath), start_path)
+    except ValueError:
+        raise ValueError('The target_dir must be a path that is relative to the start path!')
     else:
+        if relative_path[0] == '.':
+            raise ValueError('target_path must be a path to a child under start_path!')
+    print relative_path
 
-        start_path = os.path.abspath(args[0])
-        try:
-            relative_path = os.path.relpath(os.path.abspath(args[1]), start_path)
-        except ValueError:
-            raise ValueError('The target_dir must be a path that is relative to the start path!')
-        else:
-            if relative_path[0] == '.':
-                raise ValueError('target_path must be a path to a child under start_path!')
-        print relative_path
-        json_path = os.path.abspath(args[2])
-
-        build_sec_obj(relative_path, json_path)
+    secSchema = build_sec_obj(relative_path)
