@@ -105,3 +105,26 @@ Valid flags: `OBJECT_INHERIT`, `CONTAINER_INHERIT`, `NO_PROPOGATE_INHERIT`, `INH
 **-h** Help flag
 
 **-l** Set the global logging level. `1` thru `5`, where one is minimal logging. Does *not* affect security object level logging.
+
+## Security Object JSON Schema Generator
+pywinperms relies on a Security Object Schema that is based on JSON. To facilitate the creation of the JSON Schema, you can use `secobj_hierarchy_construct.py` to generate the JSON with existing folder structures.
+
+```
+usage: secobj_hierarchy_constructor.py [-h] [-v] -s STARTPATH -t TARGETPATHS
+                                       [TARGETPATHS ...] -o JSONOUTPUT
+
+Generate Security Object JSON Schemas from Existing Directory Structures
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+  -s STARTPATH, --start STARTPATH
+                        Start/root directory from which relative path
+                        structures will be computed.
+  -t TARGETPATHS [TARGETPATHS ...], --target TARGETPATHS [TARGETPATHS ...]
+                        Absolute paths to target directories that are relative
+                        to start directory(-s).
+  -o JSONOUTPUT, --output JSONOUTPUT
+                        Path to write generated json schema. Must end in
+                        .json.
+```
