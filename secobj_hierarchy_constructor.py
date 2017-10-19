@@ -6,6 +6,8 @@ import re
 from collections import OrderedDict
 import copy
 
+version = '1.5'
+
 def merge(a, b, path=None):
     "merges b into a"
     if path is None: path = []
@@ -59,7 +61,8 @@ def build_sec_obj(relative_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Generate Security Object JSON Schemas from Existing Directory Structures')
+        description='Generate Security Object JSON Schemas from Existing Directory Structures',
+        version=version)
     parser.add_argument(
         '-s',
         '--start',
